@@ -10,7 +10,7 @@
 
 #define MAX_ARGS 20
 
-extern char **environ; // global variable that holds the program's environment
+extern char **environ; // global variable that holds the environment
 
 void remove_newline(char *str) {
 	size_t len = strcspn(str, "\n");
@@ -53,7 +53,7 @@ int main() {
 
 		input_file = NULL;
 		output_file = NULL;
-		output_append = NULL;
+		output_append = 0;
 
 		char *copy_line = NULL;
 		copy_line = (char *)malloc(strlen(line) + 1);
@@ -89,6 +89,30 @@ int main() {
 					printf("%s=%s\n", args[1], val);
 				} else {
 					printf("%s: environment variable not found\n", args[1]);
+				}
+			}
+			free(copy_line);
+			continue;
+		}
+
+		if (strcmp(args[0], "setenv") == 0) {
+			if (args[1] == NULL) {
+				printf("Usage: setenv NAME=VALUE");
+			} else {
+				char *name_value_pair = args[1];
+				char *equal_sign = strchr(name_value_pair, '=');
+				if (equal_sign == NULL) {
+					printf("Usage: setenv NAME=VALUE");
+				} else {
+					*equal_sign = '\0';
+					char *name = name_value_pair;
+					char *value = equal_sign + 1;
+
+					if (setenv(name, value, 1) == 0) { // overwrite if exists
+						printf("Environment variable '%s' set to '%s'.\n", name, value);
+					} else {
+						perror("setenv failed");
+					}
 				}
 			}
 			free(copy_line);
