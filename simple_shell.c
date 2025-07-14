@@ -19,6 +19,8 @@ void remove_newline(char *str) {
 	}
 }
 
+const char *shell_name = "Simonell";
+
 int main() {
 	char *line = NULL;
 	size_t len = 0;
@@ -31,23 +33,24 @@ int main() {
 	char *output_file = NULL;
 	int output_append = 0;
 
-	printf("--- Simon's Simple Shell ---\n");
+	printf("--- Simon's Simple Shell - %s ---\n", shell_name);
 	printf("Type a command (e.g., ls -l /tmp). Type 'exit' to quit.\n");
+	printf("WARNING: Currently only support \"last one win\" redirection.");
 
 	while (1) {
-		printf("my_shell>");
+		printf("%s>", shell_name);
 
 		read_bytes = getline(&line, &len, stdin);
 
 		if (read_bytes == -1) {
-			printf("\nExiting my_shell.\n");
+			printf("\nExiting %s.\n", shell_name);
 			break;
 		}
 
 		remove_newline(line);
 
 		if (strcmp(line, "exit") == 0) {
-			printf("Exiting my_shell.\n");
+			printf("Exiting %s.\n", shell_name);
 			break;
 		}
 
@@ -66,16 +69,57 @@ int main() {
 		}
 		strcpy(copy_line, line);
 
-		args[0] = strtok(copy_line, " ");
-		printf("Token 0: \"%s\"\n", args[0]);
+		char *token;
+		int arg_idx = 0;
+		char *rest_of_line = copy_line;
 
-		int i = 1;
-		while (args[i - 1] != NULL && i < MAX_ARGS) {
-			args[i] = strtok(NULL, " "); // retrieves its previously saved internal static pointer
-			printf("\tToken %d: \"%s\"\n", i, args[i]);
-			i++;
+		while((token = strtok(rest_of_line, " ")) != NULL) {
+			rest_of_line = NULL; // Subsequent calls
+
+			if (strcmp(token, "<") == 0) {
+				token = strtok(rest_of_line, " ");
+				if (token == NULL) {
+					fprintf(stderr, "Syntax error: missing input file.\n");
+					free(copy_line);
+					continue;
+				}
+				input_file = token;
+			} else if (strcmp(token, ">") == 0) {
+				token = strtok(rest_of_line, " ");
+				if (token == NULL) {
+					fprintf(stderr, "Syntax error: missing output file.\n");
+					free(copy_line);
+					continue;
+				}
+				output_file = token;
+			} else if (strcmp(token, ">>") == 0) {
+				token = strtok(rest_of_line, " ");
+				if (token = NULL) {
+					fprintf(stderr, "Syntax error: missing file for appending.\n");
+					free(copy_line);
+					continue;
+				}
+				output_append = 1;
+				output_file = token;
+			} else {
+				if (arg_idx < MAX_ARGS) {
+					args[arg_idx++] = token;
+				} else {
+					fprintf(stderr, "Too many arguments (max %d)\n", MAX_ARGS);
+					free(copy_line);
+					continue;
+				}
+			}
 		}
-		args[i] = NULL;
+
+		args[arg_idx] = NULL;
+
+		if (args[0] == NULL) {
+			fprintf(stderr, "No command enetered.\n");
+			free(copy_line);
+			continue;
+		}
+
 
 		if (strcmp(args[0], "printenv") == 0) {
 			if (args[1] == NULL) {
@@ -127,6 +171,50 @@ int main() {
 			continue;
 		} else if (pid == 0) {
 			// Child process
+			if (input_file != NULL) {
+				int fd_in = open(input_file, O_RDONLY);
+				if (fd_in == -1) {
+					perror("Failed to open input file");
+					free(copy_line);
+					free(line);
+					exit(EXIT_FAILURE);
+				}
+				if (dup2(fd_in, STDIN_FILENO) == -1) { // redirect stdin (fd 0)
+					perror("Failed to redirect stdin");
+					close(fd_in);
+					free(copy_line);
+					free(line);
+					exit(EXIT_FAILURE);
+				}
+				close(fd_in);
+			}
+			
+			if (output_file != NULL) {
+				int flags = O_WRONLY | O_CREAT; // Write-only, Create if not exists
+				if (output_append) {
+					flags |= O_APPEND;
+				} else {
+					flags |= O_TRUNC;
+				}
+
+				int fd_out = open(output_file, flags, 0644); // rw-r--r--
+				if (fd_out == -1) {
+					perror("Failed to ope output file");
+					close(fd_out);
+					free(copy_line);
+					free(line);
+					exit(EXIT_FAILURE);
+				}
+				if (dup2(fd_out, STDOUT_FILENO) == -1) {
+					perror("Failed to redirect stdout");
+					close(fd_out);
+					free(copy_line);
+					free(line);
+					exit(EXIT_FAILURE);
+				}
+				close(fd_out);
+			}
+
 			execvp(args[0], args); // args is NULL-terminated and the first element can be included.
 			// non-return on success and overrides the current program
 			
