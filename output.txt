@@ -1,9 +1,1 @@
-total 64
-drwxr-xr-x 3 simon simon  4096 Jul 14 23:32 .
-drwxr-xr-x 3 simon simon  4096 Jul 14 22:29 ..
-drwxr-xr-x 8 simon simon  4096 Jul 14 22:41 .git
--rw-r--r-- 1 simon simon     0 Jul 14 23:32 output.txt
--rwxr-xr-x 1 simon simon 16576 Jul 14 20:44 read_parse_cmd
--rw-r--r-- 1 simon simon  1366 Jul 14 20:44 read_parse_cmd.c
--rwxr-xr-x 1 simon simon 17176 Jul 14 23:32 simple_shell
--rw-r--r-- 1 simon simon  5579 Jul 14 23:32 simple_shell.c
+Hello
